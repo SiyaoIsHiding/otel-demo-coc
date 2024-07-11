@@ -1,0 +1,16 @@
+<configuration>
+    <property name="pattern" value="%green(%d{HH:mm:ss.SSS}) [%yellow(%thread)] %highlight(%-5level) %cyan(%class{0}) - %msg%n" />
+    <appender name="STDOUT-DEBUG" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>${pattern}</pattern>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="STDOUT-DEBUG" />
+    </root>
+    <logger name="com.datastax.oss.driver.internal.core.cql.CqlRequestHandler" level="trace" additivity="false">
+        <appender-ref ref="STDOUT-DEBUG" />
+    </logger>
+</configuration>
