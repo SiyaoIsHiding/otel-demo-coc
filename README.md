@@ -2,8 +2,8 @@
 This is the material for the talk on CommunityOverCode Asia Summit 2024. 
 # Installation
 This guide assumes you have a working Java 8 environment, Maven, and Docker installed.
-1. `git clone` this repository
-2. Set up the Cassandra cluster either locally or or on DataStax [Astra](https://astra.datastax.com/). Local cluster gives you more control. Astra Serverless is easier to set up. 
+1. `git clone git@github.com:SiyaoIsHiding/otel-demo-coc.git` to clone this repository
+2. Set up the Cassandra cluster either locally or on DataStax [Astra](https://astra.datastax.com/). Local cluster gives you more control. Astra Serverless is easier to set up. 
    - If you are setting it up locally, you need to install [CCM](https://github.com/riptano/ccm). If you are using Mac, `brew install ccm` should work. 
    - If you are using Mac, you need to set up loopback addresses. Run 
     ```bash
@@ -42,5 +42,26 @@ This guide assumes you have a working Java 8 environment, Maven, and Docker inst
 4. Choose "Tempo", type "http://tempo:3100" in the URL field, and click "Save & Test", it should say success
 5. On your left sidebar, click "Explore", on your upper-left corner, choose "tempo" as data source
 6. Select "TraceQL" as query type. Put `{}` as the query and click "Run Query". You should see the traces like below.
-     
+
 ![UI Overview](./pics/overview.png)
+
+# To Introduce Delay to a Node
+On Linux, you can use `tc` command, detailed instructions omitted here.
+
+On Mac, you can use `pfctl`. Let's say you want to delay the traffic to and from 127.0.0.3:9042, you need to append the following two lines to `/etc/pf.conf`:
+```
+dummynet in quick on lo0 proto tcp from any to 127.0.0.3 port 9042 pipe 1
+dummynet out quick on lo0 proto tcp from 127.0.0.3 port 9042 to any pipe 1
+```
+Next, run the following commands 
+```bash
+# apply the changes
+sudo pfctl -f /etc/pf.conf
+# create the delay
+sudo dnctl pipe 1 config delay 100ms
+# confirm the delay is created
+sudo dnctl list
+# enable pfctl
+sudo pfctl -e
+```
+Later, if you want to disable it, run `sudo pfctl -d`.

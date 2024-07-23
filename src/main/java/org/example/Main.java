@@ -30,32 +30,28 @@ import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 
 
 public class Main {
-    public static void main(String[] args) throws InterruptedException {
-        // customize speculative execution policy and retry policy
-        CqlSession session = CqlSession.builder()
+    public static void main(String[] args) {
+        try (CqlSession session = CqlSession.builder()
                 .addContactPoint(new InetSocketAddress("127.0.0.1", 9042))
                 .withLocalDatacenter("datacenter1")
                 .withOpenTelemetry(initOpenTelemetry())
-                .build();
-        new Thread(() -> {
+                .build()) {
             for (int i = 0; i < 1000; i++) {
-                session.execute(SimpleStatement.newInstance("select * from system.peers").setIdempotent(true));
+                session.execute(SimpleStatement.newInstance("select * from system.peers").setIdempotent(true)); // setTracing(true) if you want to see Cassandra internal tracing
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
-            session.close();
-        }).start();
-
+        }
     }
 
     static OpenTelemetry initOpenTelemetry() {
-        // Create a channel towards Jaeger end point
+
         ManagedChannel jaegerChannel =
                 ManagedChannelBuilder.forAddress("localhost", 14250).usePlaintext().build();
-        // Export traces to Jaeger
+
         JaegerGrpcSpanExporter jaegerExporter =
                 JaegerGrpcSpanExporter.builder()
                         .setChannel(jaegerChannel)
@@ -65,7 +61,6 @@ public class Main {
         Resource serviceNameResource =
                 Resource.create(Attributes.of(ResourceAttributes.SERVICE_NAME, "Demo App"));
 
-        // Set to process the spans by the Jaeger Exporter
         SdkTracerProvider tracerProvider =
                 SdkTracerProvider.builder()
                         .addSpanProcessor(SimpleSpanProcessor.create(jaegerExporter))
@@ -74,7 +69,6 @@ public class Main {
         OpenTelemetrySdk openTelemetry =
                 OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build();
 
-        // it's always a good idea to shut down the SDK cleanly at JVM exit.
         Runtime.getRuntime().addShutdownHook(new Thread(tracerProvider::shutdown));
 
         return openTelemetry;
